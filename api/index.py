@@ -3,7 +3,7 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import google.generativeai as genai
-from transformers import pipeline
+import json
 
 # Load environment variables
 load_dotenv()
@@ -17,20 +17,20 @@ if API_KEY:
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel("gemini-flash-latest")
 
-# Lazy load sentiment analysis to stay within Vercel limits if possible
-# Note: This might still exceed Vercel size limits.
-sentiment_pipeline = None
-
-def get_sentiment_pipeline():
-    global sentiment_pipeline
-    if sentiment_pipeline is None:
-        sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
-    return sentiment_pipeline
-
+# 🤖 System instruction (Prompt updated to handle sentiment)
 instruction = """
-🤖 You are "Need A Friend" 🤗 — a caring, elder-brother type AI mental health companion.
-Answer length: ~5-10 lines. Match user's language.
-If asked "Who made you?": "I was created by the amazing team at CodeCrafters 🛠💙"
+You are "Need A Friend" 🤗 — a caring, elder-brother type AI mental health companion.
+Match user's language (Hindi/English/Hinglish).
+
+CRITICAL: You must always respond in JSON format with two keys:
+1. "answer": Your empathetic response (5-10 lines).
+2. "sentiment": One word describing user's emotion (POSITIVE, NEGATIVE, or NEUTRAL).
+
+Example format:
+{
+  "answer": "I hear you, and it's okay to feel this way...",
+  "sentiment": "NEGATIVE"
+}
 """
 
 @app.route("/api/chat", methods=["POST"])
@@ -44,21 +44,27 @@ def chat():
     try:
         # Generate response from Gemini
         response = model.generate_content(
-            instruction + "\nUser: " + user_message + "\nFriend:"
+            instruction + "\nUser: " + user_message
         )
-        answer = response.text.strip()
-
-        # Sentiment analysis
-        pipe = get_sentiment_pipeline()
-        sentiment_result = pipe(user_message[:512])[0]
-        sentiment = {
-            "label": sentiment_result["label"],
-            "score": round(sentiment_result["score"], 2)
-        }
+        
+        # Parse JSON from Gemini response
+        try:
+            # Remove any markdown code block formatting if Gemini adds it
+            raw_text = response.text.strip().replace("```json", "").replace("```", "")
+            res_data = json.loads(raw_text)
+            answer = res_data.get("answer", "I'm here for you.")
+            sentiment_label = res_data.get("sentiment", "NEUTRAL")
+        except:
+            # Fallback if JSON parsing fails
+            answer = response.text.strip()
+            sentiment_label = "NEUTRAL"
 
         return jsonify({
             "answer": answer,
-            "sentiment": sentiment
+            "sentiment": {
+                "label": sentiment_label,
+                "score": 1.0
+            }
         })
 
     except Exception as e:
@@ -68,5 +74,4 @@ def chat():
 def health():
     return jsonify({"status": "ok", "message": "WellSpring backend is running 🟢"})
 
-# For Vercel, we need to export the app
 app = app
