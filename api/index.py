@@ -4,12 +4,13 @@ from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 import json
+import re
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app)
 
 # API Configuration
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -17,19 +18,26 @@ if API_KEY:
     genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel("gemini-flash-latest")
 
-# 🤖 System instruction (Prompt updated to handle sentiment)
+# Robust JSON extraction
+def extract_json(text):
+    try:
+        # Try finding JSON block
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        return json.loads(text)
+    except:
+        return None
+
 instruction = """
 You are "Need A Friend" 🤗 — a caring, elder-brother type AI mental health companion.
 Match user's language (Hindi/English/Hinglish).
 
-CRITICAL: You must always respond in JSON format with two keys:
-1. "answer": Your empathetic response (5-10 lines).
-2. "sentiment": One word describing user's emotion (POSITIVE, NEGATIVE, or NEUTRAL).
-
-Example format:
+RESPONSE FORMAT:
+You MUST respond with a valid JSON object.
 {
-  "answer": "I hear you, and it's okay to feel this way...",
-  "sentiment": "NEGATIVE"
+  "answer": "your_empathetic_response",
+  "sentiment": "POSITIVE/NEGATIVE/NEUTRAL"
 }
 """
 
@@ -41,21 +49,20 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message received"}), 400
 
+    if not API_KEY:
+        return jsonify({"error": "Backend API Key missing. Please set GEMINI_API_KEY in Vercel environment variables."}), 500
+
     try:
-        # Generate response from Gemini
-        response = model.generate_content(
-            instruction + "\nUser: " + user_message
-        )
+        response = model.generate_content(instruction + "\nUser: " + user_message)
         
-        # Parse JSON from Gemini response
-        try:
-            # Remove any markdown code block formatting if Gemini adds it
-            raw_text = response.text.strip().replace("```json", "").replace("```", "")
-            res_data = json.loads(raw_text)
-            answer = res_data.get("answer", "I'm here for you.")
+        # Try to extract JSON
+        res_data = extract_json(response.text)
+        
+        if res_data and "answer" in res_data:
+            answer = res_data["answer"]
             sentiment_label = res_data.get("sentiment", "NEUTRAL")
-        except:
-            # Fallback if JSON parsing fails
+        else:
+            # Fallback for plain text
             answer = response.text.strip()
             sentiment_label = "NEUTRAL"
 
@@ -74,4 +81,5 @@ def chat():
 def health():
     return jsonify({"status": "ok", "message": "WellSpring backend is running 🟢"})
 
+# Export app
 app = app
