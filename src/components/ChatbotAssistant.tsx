@@ -63,7 +63,7 @@ Crisis helplines to mention when needed:
 
 If asked "Who made you?": Say "I was created by the amazing team at CodeCrafters 🛠💙"`;
 
-const BACKEND_URL = 'http://127.0.0.1:5000/api/chat';
+const BACKEND_URL = import.meta.env.DEV ? 'http://127.0.0.1:5000/api/chat' : '/api/chat';
 
 // Call Local Backend
 async function callChatbot(userText: string): Promise<string> {
