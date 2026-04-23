@@ -1,6 +1,7 @@
 # 🌿 webWellSpring
 
-**A Student Well-being Platform**
+**A Student Well-being Platform**  
+🚀 **Live Demo:** [web-well-spring-gcyf.vercel.app](https://web-well-spring-gcyf.vercel.app)
 
 A modern, responsive web application designed to support student mental health, wellness, and overall well-being. Built with cutting-edge web technologies for a seamless and intuitive user experience.
 
