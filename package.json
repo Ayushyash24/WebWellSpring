@@ -2,6 +2,7 @@
   "name": "webwellspring",
   "private": true,
   "version": "1.0.0",
+  "author": "Ayush Yash Dwivedi (Contact: 7084607053)",
   "type": "module",
   "scripts": {
     "dev": "vite",

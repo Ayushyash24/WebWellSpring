@@ -125,7 +125,8 @@ This project is currently unlicensed. See the repository for more details.
 
 ## 👨‍💻 Author
 
-[Aditya-Sharma-Aiml](https://github.com/Aditya-Sharma-Aiml)
+**Ayush Yash Dwivedi**  
+📞 Contact: 7084607053
 
 ## 📞 Support
 
